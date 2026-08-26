@@ -1,0 +1,22 @@
+[
+  {
+    "name": "TV",
+    "price": 620,
+    "necessity": 2,
+    "utility": 5,
+    "desire": 4,
+    "start_date": 1787743644,
+    "saved": 294.54,
+    "days": 0
+  },
+  {
+    "name": "SteamDeck",
+    "price": 5,
+    "necessity": 5,
+    "utility": 5,
+    "desire": 5,
+    "start_date": 1787778665,
+    "saved": 0,
+    "days": 0
+  }
+]
