@@ -5,6 +5,7 @@
     "necessity": 2,
     "utility": 5,
     "desire": 4,
+    "wish": false,
     "start_date": 1787743644,
     "saved": 294.54,
     "days": 0
@@ -15,7 +16,41 @@
     "necessity": 5,
     "utility": 5,
     "desire": 5,
+    "wish": false,
     "start_date": 1787778665,
+    "saved": 0,
+    "days": 0
+  },
+  {
+    "name": "SteamDeck2",
+    "price": 5,
+    "necessity": 5,
+    "utility": 5,
+    "desire": 5,
+    "wish": true,
+    "start_date": 1787780709,
+    "saved": 100,
+    "days": 0
+  },
+  {
+    "name": "SteamDeck3",
+    "price": 5,
+    "necessity": 5,
+    "utility": 5,
+    "desire": 5,
+    "wish": true,
+    "start_date": 1787781459,
+    "saved": 486.83000000000004,
+    "days": 0
+  },
+  {
+    "name": "st",
+    "price": 0,
+    "necessity": 0,
+    "utility": 0,
+    "desire": 0,
+    "wish": true,
+    "start_date": 1787781495,
     "saved": 0,
     "days": 0
   }

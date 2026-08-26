@@ -19,6 +19,7 @@ var(
 	priceFlag int
 	necessityFlag int
 	utilityFlag int
+	desireFlag int
 	wishFlag bool
 )
 
@@ -28,6 +29,7 @@ type Item struct {
 	Necessity int `json:"necessity"`
 	Utility int `json:"utility"`
 	Desire int `json:"desire"`
+	Wish bool `json:"wish"`
 	StartDate int64 `json:"start_date"`
 	Saved float64 `json:"saved"`
 	Days int64 `json:"days"`
@@ -38,33 +40,50 @@ func main() {
 	// os.Args[1:] -> [add]
 	// os.Args[1] -> add
 	if len(os.Args) < 2 {
-		fmt.Println("Se requiere un subcomando. Opciones: add, list")
 		os.Exit(1)
 	}
 
-	flag.Parse()
 
-	args := flag.Args()
-	subcommand := args[0]
+	subcommand := os.Args[1]
+	subArgs := os.Args[2:]
 
-	addCmd := flag.NewFlagSet("greet", flag.ContinueOnError)
+	addCmd := flag.NewFlagSet("add", flag.ContinueOnError)
 	addCmd.StringVar(&nameFlag, "name", "", "")
 	addCmd.IntVar(&priceFlag, "price", 0, "")
 	addCmd.IntVar(&necessityFlag, "necessity", 0, "")
 	addCmd.IntVar(&utilityFlag, "utility", 0, "")
-	addCmd.BoolVar(&wishFlag, "wish", false,"")
+	addCmd.IntVar(&desireFlag, "desire", 0, "")
+	addCmd.BoolVar(&wishFlag, "wish", true,"")
+
+	//depositCmd := flag.NewFlagSet("deposit", flag.ContinueOnError)
 
 	switch subcommand{
-	case "add": addNewItem(os.Args[1:])
+	case "add": 
+		if err := addCmd.Parse(subArgs); err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		if addCmd.NFlag() > 0 {
+			addNewItem()
+		} else {
+			nameFlag = subArgs[0]
+			priceFlag = parseToInt(subArgs[1])
+			necessityFlag = parseToInt(subArgs[2])
+			utilityFlag = parseToInt(subArgs[3])
+			desireFlag = parseToInt(subArgs[4])
+			wish,_  := strconv.ParseBool(subArgs[5])
+			wishFlag = wish
+			addNewItem()
+		}
 	case "list": listItems()
-	case "deposit": {
+	case "deposit": 
 		deposit, err := strconv.ParseFloat(os.Args[2], 64)
 		if err != nil {
 			fmt.Println("Error:", err)
 			return
 		}
 		depositMoney(deposit)
-	}
+	
 	case "cancel": cancel(os.Args[2])
 	default: fmt.Println("Enter a valid command")
 	}
@@ -124,23 +143,22 @@ func listItems(){
 
 }
 
-func addNewItem(parameters []string){
-	//fmt.Print(parameters[2])
-	//fastmode without flags: <name> <price> <necessity> <utility>
+func addNewItem(){
 
 	items := readItems()
 	var newItem Item
-	newItem.Name = parameters[1] 
+	newItem.Name = nameFlag 
 	for _, item := range items{
 		if(strings.EqualFold(newItem.Name, item.Name)){
 			log.Fatal("Item already exist")
 		}
 	}
 
-	newItem.Price = parseToInt(parameters[2])
-	newItem.Necessity = parseToInt(parameters[3])
-	newItem.Utility = parseToInt(parameters[4])
-	newItem.Desire = parseToInt(parameters[5])
+	newItem.Price = priceFlag
+	newItem.Necessity = necessityFlag
+	newItem.Utility = utilityFlag
+	newItem.Desire = desireFlag
+	newItem.Wish = wishFlag
 
 	if( newItem.Price < 0 || newItem.Price > 10 ||
 	    newItem.Necessity < 0 || newItem.Necessity >10 ||
@@ -168,19 +186,23 @@ func depositMoney(deposit float64){
 	percentages := calculatePercentages(items)
 
 	for i, item := range items {
-		items[i].Saved += math.Round((deposit * percentages[item.Name])*100) /100
+			items[i].Saved += math.Round((deposit * percentages[item.Name])*100) /100
 	}
 
 	saveItems(items)
 }
 
 func (i Item) Score() float64 {
+	if(i.Wish){
     days := time.Since(time.Unix(i.StartDate, 0)).Hours() / 24
 
     return float64(i.Desire)*0.20 +
         float64(i.Necessity)*0.25 +
         float64(i.Utility)*0.30 +
         calculateTimeScore(days)*0.25
+	}
+	
+	return 0
 }
 
 func calculateTimeScore(days float64) float64{
