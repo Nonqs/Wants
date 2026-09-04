@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"math"
 	"slices"
 	"strings"
 
@@ -16,7 +15,7 @@ import (
 
 var(
 	nameFlag string
-	priceFlag int
+	priceFlag float64
 	necessityFlag int
 	utilityFlag int
 	desireFlag int
@@ -25,7 +24,7 @@ var(
 
 type Item struct {
 	Name string `json:"name"`
-	Price int `json:"price"`
+	Price float64 `json:"price"`
 	Necessity int `json:"necessity"`
 	Utility int `json:"utility"`
 	Desire int `json:"desire"`
@@ -49,12 +48,19 @@ func main() {
 
 	addCmd := flag.NewFlagSet("add", flag.ContinueOnError)
 	addCmd.StringVar(&nameFlag, "name", "", "")
-	addCmd.IntVar(&priceFlag, "price", 0, "")
+	addCmd.Float64Var(&priceFlag, "price", 0, "")
 	addCmd.IntVar(&necessityFlag, "necessity", 0, "")
 	addCmd.IntVar(&utilityFlag, "utility", 0, "")
 	addCmd.IntVar(&desireFlag, "desire", 0, "")
 	addCmd.BoolVar(&wishFlag, "wish", true,"")
 
+	modifyCmd := flag.NewFlagSet("modify", flag.ContinueOnError)
+	modifyCmd.StringVar(&nameFlag, "name", "", "")
+	modifyCmd.Float64Var(&priceFlag, "price", 0, "")
+	modifyCmd.IntVar(&necessityFlag, "necessity", 0, "")
+	modifyCmd.IntVar(&utilityFlag, "utility", 0, "")
+	modifyCmd.IntVar(&desireFlag, "desire", 0, "")
+	modifyCmd.BoolVar(&wishFlag, "wish", true,"")
 	//depositCmd := flag.NewFlagSet("deposit", flag.ContinueOnError)
 
 	switch subcommand{
@@ -67,7 +73,8 @@ func main() {
 			addNewItem()
 		} else {
 			nameFlag = subArgs[0]
-			priceFlag = parseToInt(subArgs[1])
+			parsedFloat, _ := strconv.ParseFloat(subArgs[1],64)
+			priceFlag = parsedFloat
 			necessityFlag = parseToInt(subArgs[2])
 			utilityFlag = parseToInt(subArgs[3])
 			desireFlag = parseToInt(subArgs[4])
@@ -85,6 +92,21 @@ func main() {
 		depositMoney(deposit)
 	
 	case "cancel": cancel(os.Args[2])
+	case "modify": 
+		if err := modifyCmd.Parse(subArgs); err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		var flags []string
+		modifyCmd.Visit(func(f *flag.Flag) {
+    		flags = append(flags, f.Name)
+		})
+
+		if(strings.EqualFold(nameFlag, "")){
+			log.Fatal("A name must be provide")
+		}
+		modifyItem(flags)
 	default: fmt.Println("Enter a valid command")
 	}
 }
@@ -110,6 +132,28 @@ func saveItems(items []Item) {
 	}
 }
 
+func modifyItem(flags []string) {
+	items := readItems()
+	
+	for i, item := range items{
+		if(strings.EqualFold(item.Name, nameFlag)){
+			for _, f := range flags{
+				switch f{
+					case "price": items[i].Price = priceFlag
+					case "necessity": items[i].Necessity = necessityFlag
+					case "utility": items[i].Utility = utilityFlag
+					case "desire": items[i].Desire = desireFlag
+					case "wish": items[i].Wish = wishFlag
+				}
+			}
+			break
+		}
+	}
+
+	saveItems(items)
+	
+}
+
 func cancel(name string){
 	items := readItems()
 
@@ -133,14 +177,49 @@ func cancel(name string){
 	}
 }
 
-func listItems(){
-
+func listItems() {
 	items := readItems()
 
-	for i, item := range items{
-		fmt.Printf("%d. %v: %v / %v\n", i+1, item.Name, item.Price, item.Saved)
-	}
+	for i, item := range items {
+		percentage := 0.0
 
+		if item.Price > 0 {
+			percentage = (item.Saved / float64(item.Price)) * 100
+		}
+
+		if percentage > 100 {
+			percentage = 100
+		}
+
+		barWidth := 25
+		filled := int((percentage / 100) * float64(barWidth))
+		empty := barWidth - filled
+
+		bar := "[" +
+			strings.Repeat("█", filled) +
+			strings.Repeat("░", empty) +
+			"]"
+
+		days := int(time.Since(time.Unix(item.StartDate, 0)).Hours() / 24)
+
+		fmt.Printf(
+			"%d. %s\n"+
+				"   Wanting it for: %d days\n"+
+				"   %s %.1f%%\n"+
+				"   %.2f / %.0f €\n"+
+				"   Utility: %d | Necessity: %d | Desire: %d\n\n",
+			i+1,
+			item.Name,
+			days,
+			bar,
+			percentage,
+			item.Saved,
+			item.Price,
+			item.Utility,
+			item.Necessity,
+			item.Desire,
+		)
+	}
 }
 
 func addNewItem(){
@@ -177,23 +256,36 @@ func addNewItem(){
 
 func depositMoney(deposit float64){
 
-	if(deposit < 0){
+	//TODO: SOlucionar que hacer en caso de que todos los items esten llenos
+	if(deposit <= 0){
 		log.Fatal("Deposit must be a greater than 0")
 	}
 
 	items := readItems()
 
 	percentages := calculatePercentages(items)
+	var extra float64
 
 	for i, item := range items {
-			items[i].Saved += math.Round((deposit * percentages[item.Name])*100) /100
+		money := deposit * percentages[item.Name]
+		if(money + item.Saved > item.Price){
+			aux := item.Price - item.Saved
+			items[i].Saved += aux
+			extra += money - aux
+		}else{
+			items[i].Saved += money
+		}
 	}
 
 	saveItems(items)
+
+	if(extra > 0){
+		depositMoney(extra)
+	}
 }
 
 func (i Item) Score() float64 {
-	if(i.Wish){
+	if(i.Wish && i.Price > i.Saved){
     days := time.Since(time.Unix(i.StartDate, 0)).Hours() / 24
 
     return float64(i.Desire)*0.20 +
