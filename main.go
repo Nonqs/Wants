@@ -125,7 +125,10 @@ func readItems() []Item{
 }
 
 func saveItems(items []Item) {
-	newData, _ := json.MarshalIndent(items, "", "  ")
+	newData, err := json.MarshalIndent(items, "", "  ")
+	if err != nil {
+		log.Fatal("failed to marshal items:", err)
+	}
 
 	if err := os.WriteFile("items.json", newData, 0644); err != nil {
 		panic(err)
@@ -162,8 +165,12 @@ func cancel(name string){
 	
 	for i, item := range items{
 		if(item.Name == name){
-			j = i
-			deposit = item.Saved
+			if(item.Name == "extra") {
+				deleteExtra()
+			}else{
+				j = i
+				deposit = item.Saved
+			}
 		}
 	}
 
@@ -175,6 +182,27 @@ func cancel(name string){
 		depositMoney(deposit)
 
 	}
+}
+
+func deleteExtra(){
+	//TODO: if extra is deleted, ask what to do with de extra money
+	// A. redistribute among the other products
+	// B. Delete deposit (for investing, other expenses, etc)
+
+	
+}
+
+func createExtra()Item{
+	var newItem Item
+	newItem.Name = "extra"
+	newItem.Price = 0
+	newItem.Necessity = 0
+	newItem.Utility = 0
+	newItem.Desire = 0
+	newItem.Wish = false
+	newItem.StartDate = time.Now().Unix()
+	
+	return newItem
 }
 
 func listItems() {
@@ -239,8 +267,7 @@ func addNewItem(){
 	newItem.Desire = desireFlag
 	newItem.Wish = wishFlag
 
-	if( newItem.Price < 0 || newItem.Price > 10 ||
-	    newItem.Necessity < 0 || newItem.Necessity >10 ||
+	if( newItem.Necessity < 0 || newItem.Necessity >10 ||
 		newItem.Utility < 0 || newItem.Utility >10 ||
 		newItem.Desire < 0 || newItem.Desire > 10 ){
 
@@ -265,15 +292,34 @@ func depositMoney(deposit float64){
 
 	percentages := calculatePercentages(items)
 	var extra float64
+	// No items || all items are full
+	if(len(percentages) == 0){
+		for i, item := range items {
+			if(item.Name == "extra"){
+				items[i].Saved += deposit
+				deposit = 0
+			}
+		}
 
-	for i, item := range items {
-		money := deposit * percentages[item.Name]
-		if(money + item.Saved > item.Price){
-			aux := item.Price - item.Saved
-			items[i].Saved += aux
-			extra += money - aux
-		}else{
-			items[i].Saved += money
+		if(deposit != 0){
+			items = append(items, createExtra())
+			for i, item := range items {
+				if(item.Name == "extra"){
+					items[i].Saved += deposit
+					deposit = 0
+				}
+			}
+		}
+	}else{
+		for i, item := range items {
+			money := deposit * percentages[item.Name]
+			if(money + item.Saved > item.Price){
+				aux := item.Price - item.Saved
+				items[i].Saved += aux
+				extra += money - aux
+			}else{
+				items[i].Saved += money
+			}
 		}
 	}
 
@@ -313,6 +359,10 @@ func calculatePercentages(items []Item) map[string]float64 {
     for _, item := range items {
         totalScore += item.Score()
     }
+
+	if totalScore <= 0 {
+		return percentages
+	}
 
     for _, item := range items {
         percentage := item.Score() / totalScore
