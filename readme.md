@@ -60,3 +60,74 @@ wants deposit
 wants modify
 wants cancel
 wants help
+```
+## Installation
+
+### Requirements
+
+For now, `wants` is built from source, so you need:
+
+- Git
+- Go
+
+Clone the repository:
+
+```bash
+git clone <repository-url>
+cd wants
+```
+
+Run the installer:
+
+```bash
+chmod +x setup/setup.sh
+./setup/setup.sh
+```
+
+The installer builds the application and installs the binary at:
+
+```text
+~/.local/bin/wants
+```
+
+Make sure `~/.local/bin` is in your `PATH`.
+
+If you use Fish:
+
+```fish
+fish_add_path ~/.local/bin
+```
+
+Then open a new terminal and test:
+
+```bash
+wants help
+```
+
+After that, `wants` can be used from anywhere:
+
+```bash
+wants list
+wants deposit 100
+```
+
+## Data
+
+Currently, `wants` stores its data locally as JSON.
+
+On Linux:
+
+```text
+~/.local/share/wants/items.json
+```
+
+You can use a custom location with the `WANTS_DATA_PATH` environment variable.
+
+## TODO
+
+- [ ] Replace JSON storage with SQLite
+- [ ] Add unit tests
+- [ ] Improve error handling
+- [ ] Improve command validation
+- [ ] Improve money handling and rounding
+- [ ] Handle edge cases when every item is fully funded
